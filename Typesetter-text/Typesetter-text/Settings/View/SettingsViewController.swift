@@ -7,6 +7,7 @@
 
 import UIKit
 import PhotosUI
+import Combine
 
 class SettingsViewController: UIViewController {
 
@@ -14,17 +15,46 @@ class SettingsViewController: UIViewController {
     @IBOutlet weak var userNameLabel: UILabel!
     @IBOutlet weak var menubutton: UIButton!
     private let titlelabel = UILabel()
-    
+    private let viewModel = UserViewModel.shared
+    private var cancellables: Set<AnyCancellable> = []
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupUI()
+        subscribe()
+        viewModel.getUser()
     }
     
     func setupUI() {
+        self.navigationController?.navigationBar.isHidden = false
         titlelabel.font = .semibold(size: 24)
         titlelabel.textColor = .white
+        titlelabel.text = "Settings"
         setNavigationBar(leftTitle: titlelabel)
         userNameLabel.font = .semibold(size: 24)
         menubutton.titleLabel?.font = .medium(size: 24)
+    }
+    
+    func subscribe() {
+        viewModel.$name
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] name in
+                guard let self = self else { return }
+                self.userNameLabel.text = name
+            }
+            .store(in: &cancellables)
+        
+        viewModel.$photo
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] photo in
+                guard let self = self else { return }
+                if let photo = photo {
+                    self.photoImageView.image = UIImage(data: photo)
+                } else {
+                    self.photoImageView.image = UIImage(named: "DefaultPhoto")
+                }
+            }
+            .store(in: &cancellables)
     }
 
     @IBAction func choosePhoto(_ sender: UIButton) {
@@ -138,8 +168,9 @@ extension SettingsViewController: UIImagePickerControllerDelegate, UINavigationC
                 photoImageView.image = originalImage
             }
             if let imageData = photoImageView.image?.jpegData(compressionQuality: 1.0) {
-                let nsData = imageData as NSData
-                viewModel.setPhoto(data: nsData)
+                let data = imageData as Data
+                viewModel.photo = data
+                viewModel.saveUser(completion: { _ in })
             }
             picker.dismiss(animated: true, completion: nil)
         }

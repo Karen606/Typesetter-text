@@ -59,5 +59,7 @@ class MenuViewController: UIViewController {
     }
     
     @IBAction func clickedSettings(_ sender: UIButton) {
+        let settingsVC = SettingsViewController(nibName: "SettingsViewController", bundle: nil)
+        self.navigationController?.pushViewController(settingsVC, animated: true)
     }
 }

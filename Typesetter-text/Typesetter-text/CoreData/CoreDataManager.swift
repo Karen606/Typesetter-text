@@ -13,15 +13,25 @@ class CoreDataManager {
     static let shared = CoreDataManager()
     private init() {}
     
-    func registerUser(name: String, completion: @escaping (Bool) -> Void) {
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { completion(false)
+    func saveUser(name: String, photo: Data?, completion: @escaping (Bool) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            completion(false)
             return
         }
         appDelegate.persistentContainer.performBackgroundTask { managedContext in
-            let orderEntity = NSEntityDescription.entity(forEntityName: "User", in: managedContext)!
-            let order = NSManagedObject(entity: orderEntity, insertInto: managedContext)
-            order.setValue(name, forKey: "name")
+            let fetchRequest: NSFetchRequest<User> = User.fetchRequest()
+            fetchRequest.fetchLimit = 1
             do {
+                let users = try managedContext.fetch(fetchRequest)
+                let user: NSManagedObject
+                if let existingUser = users.first {
+                    user = existingUser
+                } else {
+                    let userEntity = NSEntityDescription.entity(forEntityName: "User", in: managedContext)!
+                    user = NSManagedObject(entity: userEntity, insertInto: managedContext)
+                }
+                user.setValue(name, forKey: "name")
+                user.setValue(photo, forKey: "photo")
                 try managedContext.save()
                 DispatchQueue.main.async {
                     completion(true)
@@ -34,6 +44,7 @@ class CoreDataManager {
             }
         }
     }
+
     
     func saveText(textModel: TextModel, completion: @escaping (Bool) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { completion(false)
@@ -85,7 +96,6 @@ class CoreDataManager {
         }
     }
     
-    
     func fetchUser(completion: @escaping (UserModel?) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             completion(nil)
@@ -108,6 +118,7 @@ class CoreDataManager {
             }
         }
     }
+
     
     func saveWork(workModel: WorkModel, completion: @escaping (Bool) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { completion(false)
