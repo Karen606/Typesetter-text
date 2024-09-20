@@ -70,6 +70,48 @@ class WordsViewController: UIViewController {
             }
             .store(in: &cancellables)
     }
+    
+    func saveTextAsFile(extension fileExtension: String, content: String) {
+            let firstWord = content.components(separatedBy: .whitespacesAndNewlines).first ?? "Untitled"
+            let sanitizedFileName = firstWord.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "[^a-zA-Z0-9]", with: "", options: .regularExpression)
+            let fileName = sanitizedFileName.isEmpty ? "Untitled" : sanitizedFileName
+            let tempDirectory = FileManager.default.temporaryDirectory
+            let tempFileURL = tempDirectory.appendingPathComponent("typesetter-\(fileName).\(fileExtension)")
+            
+            do {
+                try content.write(to: tempFileURL, atomically: true, encoding: .utf8)
+                let documentPicker = UIDocumentPickerViewController(forExporting: [tempFileURL], asCopy: true)
+                documentPicker.delegate = self
+                present(documentPicker, animated: true, completion: nil)
+            } catch {
+                print("Error creating \(fileExtension) file: \(error)")
+            }
+        }
+
+        func saveTextAsPDF(content: String) {
+            let firstWord = content.components(separatedBy: .whitespacesAndNewlines).first ?? "Untitled"
+            let sanitizedFileName = firstWord.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "[^a-zA-Z0-9]", with: "", options: .regularExpression)
+            let fileName = sanitizedFileName.isEmpty ? "Untitled" : sanitizedFileName
+            let tempDirectory = FileManager.default.temporaryDirectory
+            let tempFileURL = tempDirectory.appendingPathComponent("typesetter-\(fileName).pdf")
+            
+            let pdfRenderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792))
+            do {
+                try pdfRenderer.writePDF(to: tempFileURL, withActions: { context in
+                    context.beginPage()
+                    
+                    let textRect = CGRect(x: 20, y: 20, width: 572, height: 752)
+                    content.draw(in: textRect, withAttributes: [
+                        .font: UIFont.systemFont(ofSize: 12)
+                    ])
+                })
+                let documentPicker = UIDocumentPickerViewController(forExporting: [tempFileURL], asCopy: true)
+                documentPicker.delegate = self
+                present(documentPicker, animated: true, completion: nil)
+            } catch {
+                print("Error creating PDF: \(error)")
+            }
+        }
 
     
     @IBAction func clickedMenuButton(_ sender: UIButton) {
@@ -126,22 +168,15 @@ extension WordsViewController: DialogViewDelegate {
     func save() {
         guard let text = textView.text, !text.isEmpty else { return }
         
-        let firstWord = text.components(separatedBy: .whitespacesAndNewlines).first ?? "Untitled"
-                let sanitizedFileName = firstWord.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "[^a-zA-Z0-9]", with: "", options: .regularExpression)
-                let fileName = sanitizedFileName.isEmpty ? "Untitled" : sanitizedFileName
-                let tempDirectory = FileManager.default.temporaryDirectory
-                let tempFileURL = tempDirectory.appendingPathComponent("typesetter-\(fileName).txt")
-               do {
-                   try text.write(to: tempFileURL, atomically: true, encoding: .utf8)
-                   let documentPicker = UIDocumentPickerViewController(forExporting: [tempFileURL], asCopy: true)
-                   documentPicker.delegate = self
-                   documentPicker.modalPresentationStyle = .formSheet
-                   present(documentPicker, animated: true, completion: nil)
-               } catch {
-                   print("Error creating temporary file: \(error)")
-               }
-        
-    
+        let alert = UIAlertController(title: "Save as", message: "Choose a file format", preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Save as .txt", style: .default, handler: { _ in
+            self.saveTextAsFile(extension: "txt", content: text)
+        }))
+        alert.addAction(UIAlertAction(title: "Save as .pdf", style: .default, handler: { _ in
+            self.saveTextAsPDF(content: text)
+        }))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        present(alert, animated: true, completion: nil)
     }
     
     func close() {
@@ -190,7 +225,7 @@ extension WordsViewController {
 extension WordsViewController: UIDocumentPickerDelegate {
     
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        if let selectedURL = urls.first {
+        if urls.first != nil {
             viewModel.saveProject { _ in }
             viewModel.removeWork { success in
                 if success {
@@ -203,8 +238,5 @@ extension WordsViewController: UIDocumentPickerDelegate {
                 }
             }
         }
-    }
-    
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
     }
 }
