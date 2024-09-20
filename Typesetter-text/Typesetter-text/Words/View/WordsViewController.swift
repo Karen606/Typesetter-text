@@ -124,22 +124,24 @@ extension WordsViewController: UITextViewDelegate {
 
 extension WordsViewController: DialogViewDelegate {
     func save() {
+        guard let text = textView.text, !text.isEmpty else { return }
         
-        viewModel.saveProject { [weak self] success in
-            guard let self = self else { return }
-            
-        }
+        let firstWord = text.components(separatedBy: .whitespacesAndNewlines).first ?? "Untitled"
+                let sanitizedFileName = firstWord.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "[^a-zA-Z0-9]", with: "", options: .regularExpression)
+                let fileName = sanitizedFileName.isEmpty ? "Untitled" : sanitizedFileName
+                let tempDirectory = FileManager.default.temporaryDirectory
+                let tempFileURL = tempDirectory.appendingPathComponent("typesetter-\(fileName).txt")
+               do {
+                   try text.write(to: tempFileURL, atomically: true, encoding: .utf8)
+                   let documentPicker = UIDocumentPickerViewController(forExporting: [tempFileURL], asCopy: true)
+                   documentPicker.delegate = self
+                   documentPicker.modalPresentationStyle = .formSheet
+                   present(documentPicker, animated: true, completion: nil)
+               } catch {
+                   print("Error creating temporary file: \(error)")
+               }
         
-        viewModel.removeWork { success in
-            if success {
-                self.viewModel.clear()
-                if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
-                    self.navigationController?.popToViewController(menuVC, animated: true)
-                } else {
-                    self.navigationController?.popToRootViewController(animated: true)
-                }
-            }
-        }
+    
     }
     
     func close() {
@@ -185,3 +187,24 @@ extension WordsViewController {
     }
 }
 
+extension WordsViewController: UIDocumentPickerDelegate {
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        if let selectedURL = urls.first {
+            viewModel.saveProject { _ in }
+            viewModel.removeWork { success in
+                if success {
+                    self.viewModel.clear()
+                    if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
+                        self.navigationController?.popToViewController(menuVC, animated: true)
+                    } else {
+                        self.navigationController?.popToRootViewController(animated: true)
+                    }
+                }
+            }
+        }
+    }
+    
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    }
+}
