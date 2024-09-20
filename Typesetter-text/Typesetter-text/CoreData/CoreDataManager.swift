@@ -86,7 +86,7 @@ class CoreDataManager {
     }
     
     
-    func fetchUser(completion: @escaping (UserModel?) -> Void){
+    func fetchUser(completion: @escaping (UserModel?) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             completion(nil)
             return
@@ -109,4 +109,68 @@ class CoreDataManager {
         }
     }
     
+    func saveWork(workModel: WorkModel, completion: @escaping (Bool) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { completion(false)
+            return
+        }
+        appDelegate.persistentContainer.performBackgroundTask { managedContext in
+            let orderEntity = NSEntityDescription.entity(forEntityName: "Work", in: managedContext)!
+            let work = NSManagedObject(entity: orderEntity, insertInto: managedContext)
+            work.setValue(workModel.work, forKey: "work")
+            work.setValue(workModel.price, forKey: "price")
+            do {
+                try managedContext.save()
+                DispatchQueue.main.async {
+                    completion(true)
+                }
+            } catch let error as NSError {
+                print("Could not save. \(error), \(error.userInfo)")
+                DispatchQueue.main.async {
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    func fetchWork(completion: @escaping (WorkModel?) -> Void) {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            completion(nil)
+            return
+        }
+        appDelegate.persistentContainer.performBackgroundTask { managedContext in
+            let fetchRequest: NSFetchRequest<Work> = Work.fetchRequest()
+            do {
+                let work = try managedContext.fetch(fetchRequest)
+                
+                if let work = work.last {
+                    let price = work.price
+                    let work = work.work ?? ""
+                    let workModel = WorkModel(work: work, price: price)
+                    completion(workModel)
+                } else {
+                    completion(nil)
+                }
+            } catch let error as NSError {
+                print("Could not fetch. \(error), \(error.userInfo)")
+                completion(nil)
+            }
+        }
+    }
+    
+    func removeWork() {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            return
+        }
+        
+        appDelegate.persistentContainer.performBackgroundTask { managedContext in
+            let fetchRequest: NSFetchRequest<Work> = Work.fetchRequest()
+            do {
+                let work = try managedContext.fetch(fetchRequest)
+                work.forEach({ managedContext.delete($0) })
+                try managedContext.save()
+            } catch let error as NSError {
+                print("Could not delete. \(error), \(error.userInfo)")
+            }
+        }
+    }
 }

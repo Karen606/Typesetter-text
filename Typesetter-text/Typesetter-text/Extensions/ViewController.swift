@@ -8,16 +8,16 @@
 import UIKit
 
 extension UIViewController {
-    func setNavigationBar(title: String?, button: UIButton?) {
+    func setNavigationBar(leftTitle: UILabel?, button: UIButton? = nil, rightTitle: UILabel? = nil) {
         if let nextButton = button {
             navigationItem.rightBarButtonItem = UIBarButtonItem(customView: nextButton)
         }
-        let titleLabel = UILabel()
-        titleLabel.numberOfLines = 0
-        titleLabel.text = title
-        titleLabel.textColor = .white
-        titleLabel.font = UIFont.semibold(size: 24)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(customView: titleLabel)
+        if let leftTitle = leftTitle {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(customView: leftTitle)
+        }
+        if let rightTitle = rightTitle {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(customView: rightTitle)
+        }
     }
     
     @objc func clickedBackButton() {
