@@ -29,7 +29,7 @@ class MenuViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] price in
                 guard let self = self else { return }
-                self.priceLabel.text = "Earned: \(price)$"
+                self.priceLabel.text = "Earned: \(price.formatString())$"
             }
             .store(in: &cancellables)
         
@@ -54,6 +54,8 @@ class MenuViewController: UIViewController {
     }
     
     @IBAction func clickedAchievements(_ sender: UIButton) {
+        let achievementsVC = AchievementsViewController(nibName: "AchievementsViewController", bundle: nil)
+        self.navigationController?.pushViewController(achievementsVC, animated: true)
     }
     
     @IBAction func clickedSettings(_ sender: UIButton) {

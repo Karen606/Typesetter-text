@@ -42,6 +42,7 @@ class DialogView: UIView {
     }
     
     @IBAction func clickedYes(_ sender: UIButton) {
+        self.removeFromSuperview()
         delegate?.save()
     }
     

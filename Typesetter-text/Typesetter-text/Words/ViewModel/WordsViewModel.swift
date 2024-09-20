@@ -14,6 +14,7 @@ class WordsViewModel {
     @Published var wordsCount: Int = 0
     @Published var text: String?
     var totalPrice: Double?
+    var work: WorkModel?
     private init() {}
     
     func setText(text: String?) {
@@ -64,10 +65,11 @@ class WordsViewModel {
     func setWork(work: WorkModel) {
         self.wordPrice = work.price
         self.text = work.work
+        self.work = work
     }
     
-    func removeWork() {
-        CoreDataManager.shared.removeWork()
+    func removeWork(completion: @escaping (Bool) -> Void) {
+        CoreDataManager.shared.removeWork(completion: completion)
     }
     
     func clear() {
@@ -75,5 +77,7 @@ class WordsViewModel {
         text = nil
         price = nil
         wordsCount = 0
+        totalPrice = nil
+        work = nil
     }
 }

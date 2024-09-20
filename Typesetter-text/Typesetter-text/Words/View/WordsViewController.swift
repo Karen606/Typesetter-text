@@ -22,6 +22,7 @@ class WordsViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         subscribe()
+        registerKeyboardNotifications()
     }
     
     func setupUI() {
@@ -86,12 +87,23 @@ class WordsViewController: UIViewController {
     }
     
     @IBAction func clickedEndButton(_ sender: UIButton) {
-        let dialogView = DialogView.instanceFromNib()
-        dialogView.delegate = self
-        dialogView.commonInit()
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
-            keyWindow.addSubview(dialogView)
+        if textView.text.isEmpty {
+            self.viewModel.removeWork { success in
+                self.viewModel.clear()
+                if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
+                    self.navigationController?.popToViewController(menuVC, animated: true)
+                } else {
+                    self.navigationController?.popToRootViewController(animated: true)
+                }
+            }
+        } else {
+            let dialogView = DialogView.instanceFromNib()
+            dialogView.delegate = self
+            dialogView.commonInit()
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                keyWindow.addSubview(dialogView)
+            }
         }
     }
 }
@@ -100,12 +112,25 @@ extension WordsViewController: UITextViewDelegate {
     func textViewDidChangeSelection(_ textView: UITextView) {
         viewModel.setText(text: textView.text)
     }
+    
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" {
+            textView.endEditing(true)
+            return false
+        }
+        return true
+    }
 }
 
 extension WordsViewController: DialogViewDelegate {
     func save() {
+        
         viewModel.saveProject { [weak self] success in
             guard let self = self else { return }
+            
+        }
+        
+        viewModel.removeWork { success in
             if success {
                 self.viewModel.clear()
                 if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
@@ -118,12 +143,45 @@ extension WordsViewController: DialogViewDelegate {
     }
     
     func close() {
-        viewModel.removeWork()
-        viewModel.clear()
-        if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
-            self.navigationController?.popToViewController(menuVC, animated: true)
-        } else {
-            self.navigationController?.popToRootViewController(animated: true)
+        viewModel.removeWork { [weak self] success in
+            guard let self = self else { return }
+            self.viewModel.clear()
+            if let menuVC = self.navigationController?.viewControllers.first(where: { $0 is MenuViewController }) {
+                self.navigationController?.popToViewController(menuVC, animated: true)
+            } else {
+                self.navigationController?.popToRootViewController(animated: true)
+            }
         }
     }
 }
+
+extension WordsViewController {
+    
+    func registerKeyboardNotifications() {
+        NotificationCenter.default.addObserver(self, selector: #selector(WordsViewController.keyboardNotification(notification:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+    }
+    
+    @objc func keyboardNotification(notification: NSNotification) {
+        
+        if let userInfo = notification.userInfo {
+            let endFrame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
+            let duration: TimeInterval = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0
+            let animationCurveRawNSN = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber
+            let animationCurveRaw = animationCurveRawNSN?.uintValue ?? UIView.AnimationOptions.curveEaseInOut.rawValue
+            let animationCurve: UIView.AnimationOptions = UIView.AnimationOptions(rawValue: animationCurveRaw)
+            if (endFrame?.origin.y)! >= UIScreen.main.bounds.size.height {
+                textView.contentInset = .zero
+            } else {
+                let height: CGFloat = (notification.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as? CGRect)!.size.height
+                textView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: height, right: 0)
+            }
+            
+            UIView.animate(withDuration: duration,
+                           delay: TimeInterval(0),
+                           options: animationCurve,
+                           animations: { self.view.layoutIfNeeded() },
+                           completion: nil)
+        }
+    }
+}
+

@@ -157,19 +157,25 @@ class CoreDataManager {
         }
     }
     
-    func removeWork() {
+    func removeWork(completion: @escaping (Bool) -> Void) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             return
         }
-        
         appDelegate.persistentContainer.performBackgroundTask { managedContext in
-            let fetchRequest: NSFetchRequest<Work> = Work.fetchRequest()
+            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Work.fetchRequest()
+            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            
             do {
-                let work = try managedContext.fetch(fetchRequest)
-                work.forEach({ managedContext.delete($0) })
+                try managedContext.execute(deleteRequest)
                 try managedContext.save()
+                DispatchQueue.main.async {
+                    completion(true)
+                }
             } catch let error as NSError {
                 print("Could not delete. \(error), \(error.userInfo)")
+                DispatchQueue.main.async {
+                    completion(false)
+                }
             }
         }
     }
