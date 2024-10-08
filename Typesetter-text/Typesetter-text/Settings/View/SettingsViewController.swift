@@ -158,6 +158,11 @@ extension SettingsViewController: UIImagePickerControllerDelegate, UINavigationC
                     UIApplication.shared.open(settingsURL, options: [:], completionHandler: nil)
                 }
             }))
+            if let popoverController = alert.popoverPresentationController {
+                popoverController.sourceView = self.view // Your source view
+                popoverController.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+                popoverController.permittedArrowDirections = []
+            }
             present(alert, animated: true, completion: nil)
         }
         
