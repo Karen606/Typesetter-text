@@ -1,0 +1,6 @@
+framework module Pods_Typesetter_text {
+  umbrella header "Pods-Typesetter-text-umbrella.h"
+
+  export *
+  module * { export * }
+}
